@@ -1,9 +1,10 @@
 module StraightStellarator
 
-struct Coil
-    r::Float64
-    alpha::Float64
-    current::Float64
-end
+using QuadGK
+
+export Coil, compute_B
+
+include("Coil.jl")
+include("utils.jl")
 
 end
