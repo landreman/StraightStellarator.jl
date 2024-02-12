@@ -1,0 +1,13 @@
+name = "StraightStellarator"
+uuid = "46e6c62a-a809-494b-b303-0b36d1d79807"
+authors = ["Matt Landreman"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
