@@ -64,7 +64,7 @@ function compute_poincare(coil_configuration::CoilConfiguration, x0, y0, nperiod
         tspan = (0.0, nperiods * 2π / coil_configuration.h)
         prob = ODEProblem(d_position_d_z, u0, tspan)
         #sol = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-        sol = solve(prob, saveat=2π / coil_configuration.h)
+        sol = solve(prob, saveat=2π / coil_configuration.h, reltol = 1e-3)
         #println("$sol")
         #@show sol
         #@show sol[1]

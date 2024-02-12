@@ -38,8 +38,36 @@ using Test
         config1 = CoilConfiguration([coil1, coil2], h)
         config2 = CoilConfiguration([coil2, coil1], h)
 
-        B1 = compute_B(config1, 1.4, [0.2, 0.1, 0.3])
-        B2 = compute_B(config2, 1.4, [0.2, 0.1, 0.3])
+        B1 = compute_B(config1, [0.2, 0.1, 0.3])
+        B2 = compute_B(config2, [0.2, 0.1, 0.3])
         @test B1 ≈ B2
+    end
+
+    @testset "Test computation of Poincare data" begin
+        current = 1.0e6
+        coils = [
+            Coil(1.0, 0.0, current), 
+            Coil(1.0, π, current),
+        ]
+        h = 1.0
+        coil_configuration = CoilConfiguration(coils, h)
+        x0 = range(0.025, 0.1, length=2)
+        y0 = zeros(length(x0))
+        nperiods = 20
+        compute_poincare(coil_configuration, x0, y0, nperiods)    
+    end
+
+    @testset "Test Poincare plot" begin
+        current = 1.0e6
+        coils = [
+            Coil(1.0, 0.0, current), 
+            Coil(1.0, π, current),
+        ]
+        h = 1.0
+        coil_configuration = CoilConfiguration(coils, h)
+        x0 = range(0.025, 0.1, length=2)
+        y0 = zeros(length(x0))
+        nperiods = 20
+        poincare_plot(coil_configuration, x0, y0, nperiods)    
     end
 end
