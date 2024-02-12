@@ -36,3 +36,7 @@ function compute_B(coil::Coil, h, r_eval, zmax=100.0)
     integral2, error_estimate = quadgk(B_integrand, 0, zmax)
     return μ0 / (4π) * coil.current * (integral1 + integral2)
 end
+
+function compute_B(coil_list::Vector{Coil}, h, r_eval, zmax=100.0)
+    return sum(compute_B(coil, h, r_eval, zmax) for coil in coil_list)
+end
