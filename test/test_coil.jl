@@ -34,11 +34,12 @@ using Test
     @testset "Field from a coil list should be independent of the list order" begin
         coil1 = Coil(2.3, 1.3, 1e6)
         coil2 = Coil(1.9, -0.3, 1.2e6)
-        list1 = [coil1, coil2]
-        list2 = [coil2, coil1]
+        h = 1.4
+        config1 = CoilConfiguration([coil1, coil2], h)
+        config2 = CoilConfiguration([coil2, coil1], h)
 
-        B1 = compute_B(list1, 1.4, [0.2, 0.1, 0.3])
-        B2 = compute_B(list2, 1.4, [0.2, 0.1, 0.3])
+        B1 = compute_B(config1, 1.4, [0.2, 0.1, 0.3])
+        B2 = compute_B(config2, 1.4, [0.2, 0.1, 0.3])
         @test B1 ≈ B2
     end
 end
