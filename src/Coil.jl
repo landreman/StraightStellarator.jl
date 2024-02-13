@@ -38,7 +38,7 @@ function position_and_derivative!(c::Coil, h, z)
     nothing
 end
 
-function compute_B(coil::Coil, h, r_eval, zmax=100.0; rtol=1e-3, atol=1e-10)
+function compute_B(coil::Coil, h, r_eval, zmax=100.0; rtol=1e-4, atol=1e-10)
     function B_integrand(zp)
         # Simpler version with more allocations:
         #data = γ_and_derivative(coil, h, zp)
@@ -65,11 +65,11 @@ function compute_B(coil::Coil, h, r_eval, zmax=100.0; rtol=1e-3, atol=1e-10)
     return μ0 / (4π) * coil.current * (integral1 + integral2)
 end
 
-function compute_B(coil_configuration::CoilConfiguration, r_eval, zmax=3 * 2π / coil_configuration.h)
+function compute_B(coil_configuration::CoilConfiguration, r_eval, zmax=5 * 2π / coil_configuration.h)
     return sum(compute_B(coil, coil_configuration.h, r_eval, zmax) for coil in coil_configuration.coils)
 end
 
-function compute_ψ(coil::Coil, h, r, α, zmax=100.0; rtol=1e-3, atol=1e-5)
+function compute_ψ(coil::Coil, h, r, α, zmax=100.0; rtol=1e-4, atol=1e-11)
     r0 = coil.r
 
     function ψ_integrand(zp)
@@ -101,16 +101,15 @@ function compute_ψ(coil_configuration::CoilConfiguration, x0::Vector{Float64}, 
     #return [compute_ψ(coil_configuration, sqrt(x * x + y * y), atan(y, x)) for x in x0; for y in y0]
 end
 
-function ψ_plot(coil_configuration::CoilConfiguration, x0, y0)
+function ψ_plot(coil_configuration::CoilConfiguration, x0, y0; n_levels=30)
     x0 = collect(x0)
     y0 = collect(y0)
     data = compute_ψ(coil_configuration, x0, y0)
-    @show data
-    @show size(data)
     contour(
         x0,
         y0,
         data,
+        levels=n_levels,
         label="", 
         aspect_ratio=:equal,
     )
@@ -152,7 +151,7 @@ function compute_poincare(coil_configuration::CoilConfiguration, x0, y0, nperiod
         #@show sol
         #@show sol[1]
         #@show sol[:, :]
-        results[j, :, :] = sol[:, :]
+        results[j, :, 1:nperiods + 1] .= sol[:, 1:nperiods + 1]
     end
     return results
 end
