@@ -2,13 +2,16 @@ struct Coil
     r::Float64
     α::Float64
     current::Float64
-    buffer_32::Matrix{Float64}
+    #buffer_32::Matrix{Float64}
+    buffer_32::MMatrix{3, 2}
+    buffer_3::MVector{3}
 end
 
 function Coil(r, α, current) 
     return Coil(
         r, α, current,
-        zeros(3, 2),
+        zeros(MMatrix{3, 2}),
+        zeros(MVector{3}),
     )
 end
 
@@ -17,24 +20,44 @@ struct CoilConfiguration
     h::Float64
 end
 
-function γ_and_derivative(c::Coil, h, z)
+function position_and_derivative!(c::Coil, h, z)
     θ = c.α - h * z
     sin_θ, cos_θ = sincos(θ)
-    c.buffer_32[:, :] = 
-        [[(c.r * cos_θ) (h * c.r * sin_θ)];
-        [(c.r * sin_θ) (-h * c.r * cos_θ)];
-        [z 1]]
+    #c.buffer_32[:, :] = 
+    #    [[(c.r * cos_θ) (h * c.r * sin_θ)];
+    #    [(c.r * sin_θ) (-h * c.r * cos_θ)];
+    #    [z 1]]
+    c.buffer_32[1, 1] = c.r * cos_θ
+    c.buffer_32[2, 1] = c.r * sin_θ
+    c.buffer_32[3, 1] = z
+    c.buffer_32[1, 2] = h * c.buffer_32[2, 1]
+    c.buffer_32[2, 2] = -h * c.buffer_32[1, 1]
+    c.buffer_32[3, 2] = 1.0
     
-    return c.buffer_32
+    #return c.buffer_32
+    nothing
 end
 
-function compute_B(coil::Coil, h, r_eval, zmax=100.0; rtol=1e-3, atol=1e-5)
+function compute_B(coil::Coil, h, r_eval, zmax=100.0; rtol=1e-3, atol=1e-10)
     function B_integrand(zp)
-        data = γ_and_derivative(coil, h, zp)
-        Δr = r_eval - data[:, 1]
+        # Simpler version with more allocations:
+        #data = γ_and_derivative(coil, h, zp)
+        #Δr = r_eval - data[:, 1]
+        #temp = normsq(Δr) + (1.0e-30)
+        #denominator = temp * sqrt(temp)
+        #return cross(data[:, 2], Δr) / denominator
+
+        position_and_derivative!(coil, h, zp)
+        Δr = @view coil.buffer_32[:, 1]
+        Δr -= r_eval
         temp = normsq(Δr) + (1.0e-30)
-        denominator = temp * sqrt(temp)
-        return cross(data[:, 2], Δr) / denominator
+        inv_denominator = 1.0 / (temp * sqrt(temp))
+        cross!(coil.buffer_3, Δr, coil.buffer_32[:, 2])
+        return coil.buffer_3 * inv_denominator
+
+        # Does not work:
+        #@. coil.buffer_3 *= inv_denominator
+        #return coil.buffer_3
     end
     
     integral1, error_estimate = quadgk(B_integrand, -zmax, 0; rtol=rtol, atol=atol)
@@ -113,7 +136,7 @@ function compute_poincare(coil_configuration::CoilConfiguration, x0, y0, nperiod
     function d_position_d_z(position, params, z)
         # Always make z in the first period so we don't need to worry as much
         # about the endpoint of integration for Biot-Savart.
-        position_mod = [position[1], position[2], mod(z, 2π / coil_configuration.h)]
+        position_mod = @SVector [position[1], position[2], mod(z, 2π / coil_configuration.h)]
         B = compute_B(coil_configuration, position_mod)
         return B[1:2] / B[3]
     end
