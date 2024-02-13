@@ -46,6 +46,66 @@ function compute_B(coil_configuration::CoilConfiguration, r_eval, zmax=3 * 2π /
     return sum(compute_B(coil, coil_configuration.h, r_eval, zmax) for coil in coil_configuration.coils)
 end
 
+function compute_ψ(coil::Coil, h, r, α, zmax=100.0; rtol=1e-3, atol=1e-5)
+    r0 = coil.r
+
+    function ψ_integrand(zp)
+        r_r0_cos = r * r0 * cos(α - coil.α + h * zp)
+        numerator = h * h * r_r0_cos + 1
+        denominator = sqrt(r * r + r0 * r0 - 2 * r_r0_cos + zp * zp)
+        return numerator / denominator
+    end
+
+    integral1, error_estimate = quadgk(ψ_integrand, -zmax, 0; rtol=rtol, atol=atol)
+    integral2, error_estimate = quadgk(ψ_integrand, 0, zmax; rtol=rtol, atol=atol)
+    return -μ0 / (4π) * coil.current * (integral1 + integral2)
+end
+
+function compute_ψ(coil_configuration::CoilConfiguration, r, α, zmax=3 * 2π / coil_configuration.h)
+    return sum(compute_ψ(coil, coil_configuration.h, r, α, zmax) for coil in coil_configuration.coils)
+end
+
+function compute_ψ(coil_configuration::CoilConfiguration, x0::Vector{Float64}, y0::Vector{Float64})
+    results = zeros(length(y0), length(x0))
+    for jx in eachindex(x0)
+        x = x0[jx]
+        for jy in eachindex(y0)
+            y = y0[jy]
+            results[jy, jx] = compute_ψ(coil_configuration, sqrt(x * x + y * y), atan(y, x))
+        end
+    end
+    return results
+    #return [compute_ψ(coil_configuration, sqrt(x * x + y * y), atan(y, x)) for x in x0; for y in y0]
+end
+
+function ψ_plot(coil_configuration::CoilConfiguration, x0, y0)
+    x0 = collect(x0)
+    y0 = collect(y0)
+    data = compute_ψ(coil_configuration, x0, y0)
+    @show data
+    @show size(data)
+    contour(
+        x0,
+        y0,
+        data,
+        label="", 
+        aspect_ratio=:equal,
+    )
+    # Plot the coil locations
+    for coil in coil_configuration.coils
+        x = coil.r * cos(coil.α)
+        y = coil.r * sin(coil.α)
+        plot!([x], [y],
+        color=:black,
+        markershape=:xcross,
+        label="",
+        markerstrokewidth=5,
+    )
+    end
+    xlabel!("x")
+    ylabel!("y")
+end
+
 function compute_poincare(coil_configuration::CoilConfiguration, x0, y0, nperiods)
     @assert length(x0) == length(y0)
     results = zeros(length(x0), 2, nperiods + 1)
@@ -64,7 +124,7 @@ function compute_poincare(coil_configuration::CoilConfiguration, x0, y0, nperiod
         tspan = (0.0, nperiods * 2π / coil_configuration.h)
         prob = ODEProblem(d_position_d_z, u0, tspan)
         #sol = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-        sol = solve(prob, saveat=2π / coil_configuration.h, reltol = 1e-3)
+        sol = solve(prob, saveat=2π / coil_configuration.h, reltol = 1e-4)
         #println("$sol")
         #@show sol
         #@show sol[1]
@@ -76,7 +136,7 @@ end
 
 function poincare_plot(coil_configuration::CoilConfiguration, x0, y0, nperiods)
     data = compute_poincare(coil_configuration, x0, y0, nperiods)
-    scatter(
+    scatter!(
         data[:, 1, :]', 
         data[:, 2, :]', 
         label="", 
