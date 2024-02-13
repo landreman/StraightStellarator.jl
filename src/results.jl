@@ -31,3 +31,7 @@ function ψ_plot_1()
     poincare_plot(coil_configuration, x0, y0, nperiods)
 
 end
+
+function h_scan()
+    
+end
