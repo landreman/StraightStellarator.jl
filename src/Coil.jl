@@ -112,6 +112,7 @@ function ψ_plot(coil_configuration::CoilConfiguration, x0, y0; n_levels=30)
         levels=n_levels,
         label="", 
         aspect_ratio=:equal,
+        c=:rainbow,
     )
     # Plot the coil locations
     for coil in coil_configuration.coils
@@ -121,7 +122,7 @@ function ψ_plot(coil_configuration::CoilConfiguration, x0, y0; n_levels=30)
         color=:black,
         markershape=:xcross,
         label="",
-        markerstrokewidth=5,
+        #markerstrokewidth=5,
     )
     end
     xlabel!("x")
